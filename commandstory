@@ -1,0 +1,181 @@
+#!/bin/env bash
+#=============================================================================
+# Script: Commandstory
+# Description: A tool to save recent terminal commands for classes and lectures.
+# Author: LCarles2D
+# License: MIT
+# Version: 1.0.0
+# Repository: https://github.com
+# ==============================================================================
+set -euo pipefail
+
+VERSION="1.0.0";
+GLOBALOPTSTRING=":hvo:";
+STARTCOMMAND="start";
+STOPCOMMAND="stop";
+RUTACONFIG="/tmp/commandstory/config.commandstory"
+CURRENT_SHELL=$(basename "$SHELL")
+ARCHIVO="./comandos.txt"
+
+cleanup() {
+    echo "Cerrando..."
+}
+
+trap cleanup SIGINT SIGTERM ERR
+
+usage() {
+    cat <<EOF
+Uso: $(basename "$0") [opciones] <argumento>
+
+Descripción:
+    Este script te permite guardar los comandos en un archivo, util para anotar tareas.
+
+Argumentos:
+    start          Inicia la grabacion de comandos.
+    stop           Para la grabacion de comandos y guarda el archivo. 
+
+Opciones:
+    -h          Muestra esta ayuda.
+    -v          Muestra la versión.
+    -o <ruta>   Define la ruta de salida (Solo disponible con el comando 'stop').
+Ejemplos:
+    $(basename "$0") start
+    $(basename "$0") stop -o ./mis_comandos.txt
+EOF
+exit 1
+}
+
+
+
+start (){
+
+   if [ ! -e "/tmp/commandstory" ]; then
+    mkdir /tmp/commandstory;
+    touch $RUTACONFIG;
+  else
+    if [[ -f $RUTACONFIG ]]; then
+      echo "Ya estas registrando comandos!"
+      exit 0;
+    fi
+  fi
+
+
+
+  # Evaluamos cuál es para asignar el archivo correcto
+  if [[ "$CURRENT_SHELL" == "zsh" ]]; then
+     FICHERO_HISTORIAL="$HOME/.zsh_history"
+     tail -n 1 "$FICHERO_HISTORIAL" > $RUTACONFIG;
+      echo "Guardando los proximos comandos..."
+
+  elif [[ "$CURRENT_SHELL" == "bash" ]]; then
+      FICHERO_HISTORIAL="$HOME/.bash_history"
+      tail -n 2 "$FICHERO_HISTORIAL" > $RUTACONFIG
+      echo "Guardando los proximos comandos..."
+  else
+      # Opcional: un valor por defecto si usa otro shell (como fish, sh, etc.)
+      FICHERO_HISTORIAL="${HISTFILE:-$HOME/.bash_history}"
+  fi 
+
+ 
+ 
+  }
+
+stop_zsh (){
+  
+  local TIMESTAMP=$(awk -F'[: ]+' '{print $2}' $RUTACONFIG)
+  local HISTORIAL="${HISTFILE:-$HOME/.zsh_history}";
+  
+  sed -n "/: $TIMESTAMP:0;/, \$p" "$HISTORIAL" 1> $ARCHIVO;
+  rm $RUTACONFIG;
+  
+}
+
+stop_bash (){
+  TIMESTAMP=$(awk -F'#' '{print $2}' $RUTACONFIG)
+  local HISTORIAL="${HISTFILE:-$HOME/.bash_history}";
+  awk "/#$TIMESTAMP/, EOF" $RUTACONFIG 1> $ARCHIVO
+  rm "$RUTACONFIG"
+}
+
+stop (){
+  
+  if [[ ! -f $RUTACONFIG  ]]; then
+    echo "Debes iniciar a capturar comandos con 'commandstory start'"
+    exit 1;
+  fi
+
+ if [[ $CURRENT_SHELL == "zsh"   ]]; then
+   stop_zsh "$@"
+ elif [[ $CURRENT_SHELL == "bash" ]]; then
+   stop_bash "$@"
+ fi
+  
+}
+
+main(){
+	
+	if [[ $# -eq 0	]];
+	then
+		usage
+	fi
+
+  COMMAND=$1;
+  shift
+  while getopts ${GLOBALOPTSTRING} opt; do 
+		case ${opt} in
+		       h)
+				usage		
+			;;
+		       v)
+				echo "Version actual: ${VERSION}";
+        exit
+			;;
+          o)
+        if [[ ! $COMMAND == "stop" ]]; then
+          echo "No se ha reconocido la opcion -o, escribe 'commandstory -h' para ver los comandos validos."
+          exit 1;
+        fi 
+        VALOR=$(echo "$OPTARG" | xargs)
+
+        # 2. Validamos
+        if [[ "$VALOR" =~ ^(/|~\/|\./|[a-zA-Z0-9]) ]]; then
+          ARCHIVO="$VALOR"
+        else
+          echo "Error: El formato de '$VALOR' no es válido."
+          exit 1
+        fi
+
+      ;;
+		       :)
+				echo "La opcion -$OPTARG requiere un argumento.";
+        exit 1;
+			;;
+        ?)
+          echo "-$OPTARG no es una opcion valida.";
+          exit 0;
+      ;;
+		esac
+	done
+
+
+  
+	# Comando Start
+	if [[ $COMMAND == "start"  ]];
+  then
+  
+    start
+  elif [[ $COMMAND == "stop" ]];
+  then
+    stop "$@"
+  else
+    echo "El comando '$COMMAND' no es valido utiliza ($(basename $0) -h) Para ver la ayuda."
+  fi
+
+	
+
+
+
+
+}
+
+main "$@"
