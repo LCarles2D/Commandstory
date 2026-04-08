@@ -1,0 +1,31 @@
+.TH COMMANDSTORY 1 "Abril 2026" "1.0.0" "Manual de Usuario de Commandstory"
+.SH NOMBRE
+commandstory \- Guarda el historial de comandos recientes para clases y conferencias.
+.SH SINOPSIS
+.B commandstory
+[\fIopciones\fR] \fIcomando\fR
+.SH DESCRIPCIÓN
+.B commandstory
+es una herramienta diseñada para educadores y estudiantes que permite capturar los comandos ejecutados en una sesión de terminal y guardarlos en un archivo de texto limpio.
+.SH COMANDOS
+.TP
+.B start
+Inicia la grabación de comandos. Crea un punto de referencia basado en el timestamp actual del historial.
+.TP
+.B stop
+Detiene la grabación. Filtra el historial desde el punto de inicio y guarda el resultado.
+.SH OPCIONES
+.TP
+.B \-o \fIruta\fR
+Define la ruta del archivo de salida (solo funciona con el comando \fBstop\fR). Por defecto es \fI./comandos.txt\fR.
+.TP
+.B \-h
+Muestra la ayuda básica.
+.TP
+.B \-v
+Muestra la versión del script.
+.SH ARCHIVOS
+.I /tmp/commandstory_$UID/config.commandstory
+Archivo temporal donde se guarda el punto de referencia de la sesión activa.
+.SH AUTOR
+LCarles2D (https://github.com/LCarles2D/Commandstory)
