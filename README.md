@@ -8,6 +8,14 @@ A lightweight Bash and Zsh utility to save specific command line sessions. Perfe
 ```bash
 git clone https://github.com/LCarles2D/Commandstory.git && cd Commandstory && ./install.sh
 ```
+### Post-installation
+The installer modifies your .bashrc or .zshrc to ensure the history is synchronized in real-time. To apply changes immediately without restarting:
+Bash
+
+```bash
+source ~/.bashrc  # or ~/.zshrc
+```
+
 ## How to use it
 Commandstory works like  a logic switch, first we need to "turn on" with the `start` command and then use the `stop` to generate the output file
 ```bash
