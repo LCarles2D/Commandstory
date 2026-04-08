@@ -5,7 +5,7 @@
 # Author: LCarles2D
 # License: MIT
 # Version: 1.0.0
-# Repository: https://github.com
+# Repository: https://github.com/LCarles2D/Commandstory
 # ==============================================================================
 set -euo pipefail
 
@@ -13,7 +13,8 @@ VERSION="1.0.0";
 GLOBALOPTSTRING=":hvo:";
 STARTCOMMAND="start";
 STOPCOMMAND="stop";
-RUTACONFIG="/tmp/commandstory/config.commandstory"
+RUTA_BASE="/tmp/commandstory_$(id -u)"
+RUTACONFIG="$RUTA_BASE/config.commandstory"
 CURRENT_SHELL=$(basename "$SHELL")
 ARCHIVO="./comandos.txt"
 
@@ -49,17 +50,17 @@ exit 1
 
 start (){
 
-   if [ ! -e "/tmp/commandstory" ]; then
-    mkdir /tmp/commandstory;
-    touch $RUTACONFIG;
-  else
-    if [[ -f $RUTACONFIG ]]; then
-      echo "Ya estas registrando comandos!"
-      exit 0;
-    fi
+   if [[ ! -d "$RUTA_BASE" ]]; then
+     mkdir -p -m 700 "$RUTA_BASE";
+   fi
+
+  if [[ -f "$RUTACONFIG" ]]; then
+    echo "Ya estas registrando comandos!"
+    exit 0;
   fi
 
-
+    touch "$RUTACONFIG"
+ 
 
   # Evaluamos cuál es para asignar el archivo correcto
   if [[ "$CURRENT_SHELL" == "zsh" ]]; then
@@ -79,22 +80,25 @@ start (){
  
  
   }
+  
+stop_zsh() {
+  local ULTIMO_TS=$(awk -F'[: ]+' '{print $2}' "$RUTACONFIG")
+  local HISTORIAL="${HISTFILE:-$HOME/.zsh_history}"
 
-stop_zsh (){
+  sed -n "/: $ULTIMO_TS:0;/, \$p" "$HISTORIAL" | cut -d';' -f2- > "$ARCHIVO"
   
-  local TIMESTAMP=$(awk -F'[: ]+' '{print $2}' $RUTACONFIG)
-  local HISTORIAL="${HISTFILE:-$HOME/.zsh_history}";
-  
-  sed -n "/: $TIMESTAMP:0;/, \$p" "$HISTORIAL" 1> $ARCHIVO;
-  rm $RUTACONFIG;
-  
+  rm "$RUTACONFIG"
+  echo "Comandos guardados en $ARCHIVO"
 }
 
 stop_bash (){
-  TIMESTAMP=$(awk -F'#' '{print $2}' $RUTACONFIG)
-  local HISTORIAL="${HISTFILE:-$HOME/.bash_history}";
-  awk "/#$TIMESTAMP/, EOF" $RUTACONFIG 1> $ARCHIVO
+  local TIMESTAMP=$(awk -F'#' '{print $2}' "$RUTACONFIG" | xargs)
+  local HISTORIAL="${HISTFILE:-$HOME/.bash_history}"
+  
+  sed -n "/#$TIMESTAMP/, \$p" "$HISTORIAL" | grep -v "^#" > "$ARCHIVO"
+  
   rm "$RUTACONFIG"
+  echo "Comandos guardados en $ARCHIVO."
 }
 
 stop (){
@@ -135,15 +139,14 @@ main(){
           echo "No se ha reconocido la opcion -o, escribe 'commandstory -h' para ver los comandos validos."
           exit 1;
         fi 
-        VALOR=$(echo "$OPTARG" | xargs)
-
-        # 2. Validamos
-        if [[ "$VALOR" =~ ^(/|~\/|\./|[a-zA-Z0-9]) ]]; then
-          ARCHIVO="$VALOR"
-        else
-          echo "Error: El formato de '$VALOR' no es válido."
+        VALOR="$OPTARG"
+        DIR_DESTINO=$(dirname "$VALOR")
+        if [[ ! -w "$DIR_DESTINO" ]]; then
+          echo "Error: No tienes permisos de escritura en $DIR_DESTINO"
           exit 1
         fi
+
+        ARCHIVO="$VALOR"
 
       ;;
 		       :)
